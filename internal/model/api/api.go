@@ -4,8 +4,8 @@ import (
 	"github.com/M2rk13/Otus-327619/internal/model/db"
 )
 
-type auth struct {
-	AccessKey string
+type Auth struct {
+	accessKey string
 }
 
 type Query struct {
@@ -28,26 +28,10 @@ type ConvertResponse struct {
 	Result  float64 `json:"result"`
 }
 
-func GetResult(response *ConvertResponse) float64 {
-	return response.Result
+func SetAccessKey(account db.Account, auth *Auth) {
+	auth.accessKey = account.AccessKey
 }
 
-func GetRate(response *ConvertResponse) float64 {
-	return response.Info.Quote
-}
-
-func setFrom(query *Query, currencyFrom string) {
-	query.From = currencyFrom
-}
-
-func setTo(query *Query, currencyTo string) {
-	query.To = currencyTo
-}
-
-func setAmount(query *Query, amount float64) {
-	query.Amount = amount
-}
-
-func SetAccessKey(account db.Account, auth *auth) {
-	auth.AccessKey = account.AccessKey
+func GetAccessKey(auth *Auth) string {
+	return auth.accessKey
 }
