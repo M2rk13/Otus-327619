@@ -48,7 +48,7 @@ func DispatchExampleData(iteration int) {
 
 	fmt.Println("Dispatching data ...")
 
-	store.Store(req)
-	store.Store(resp)
-	store.Store(*convLog)
+	store.Store(&req)
+	store.Store(&resp)
+	store.Store(convLog)
 }

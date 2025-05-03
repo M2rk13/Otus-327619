@@ -7,20 +7,20 @@ import (
 )
 
 var (
-	conversionRequests  []api.Request
-	conversionResponses []api.Response
-	conversionLogs      []log.ConversionLog
+	conversionRequests  []*api.Request
+	conversionResponses []*api.Response
+	conversionLogs      []*log.ConversionLog
 )
 
 func Store(data interface{}) {
 	switch val := data.(type) {
-	case api.Request:
+	case *api.Request:
 		conversionRequests = append(conversionRequests, val)
 		fmt.Println("Added ConversionRequest to repository.")
-	case api.Response:
+	case *api.Response:
 		conversionResponses = append(conversionResponses, val)
 		fmt.Println("Added ConversionResponse to repository.")
-	case log.ConversionLog:
+	case *log.ConversionLog:
 		conversionLogs = append(conversionLogs, val)
 		fmt.Println("Added ConversionLog to repository.")
 	default:
