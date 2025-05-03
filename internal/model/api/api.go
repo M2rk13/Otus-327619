@@ -8,7 +8,7 @@ type Auth struct {
 	accessKey string
 }
 
-type Query struct {
+type Request struct {
 	From   string  `json:"from"`
 	To     string  `json:"to"`
 	Amount float64 `json:"amount"`
@@ -19,11 +19,11 @@ type Info struct {
 	Quote     float64 `json:"quote"`
 }
 
-type ConvertResponse struct {
+type Response struct {
 	Success bool    `json:"success"`
 	Terms   string  `json:"terms"`
 	Privacy string  `json:"privacy"`
-	Query   Query   `json:"query"`
+	Query   Request `json:"query"`
 	Info    Info    `json:"info"`
 	Result  float64 `json:"result"`
 }
