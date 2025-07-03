@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	"github.com/M2rk13/Otus-327619/internal/model/log"
-	store "github.com/M2rk13/Otus-327619/internal/repository"
+	repository "github.com/M2rk13/Otus-327619/internal/repository"
 	"time"
 )
 
@@ -44,11 +44,11 @@ func DispatchExampleData(iteration int) {
 		}
 	}
 
-	convLog := log.NewConversionLog("log_001", req, resp)
+	convLog := log.NewConversionLog(fmt.Sprintf("log_%03d", iteration+1), req, resp)
 
 	fmt.Println("Dispatching data ...")
 
-	store.Store(&req)
-	store.Store(&resp)
-	store.Store(convLog)
+	repository.RequestChan <- &req
+	repository.ResponseChan <- &resp
+	repository.LogChan <- convLog
 }
