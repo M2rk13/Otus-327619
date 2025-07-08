@@ -1,14 +1,19 @@
-package dispatcher
+package service
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	"github.com/M2rk13/Otus-327619/internal/model/log"
-	repository "github.com/M2rk13/Otus-327619/internal/repository"
-	"time"
 )
 
-func DispatchExampleData(iteration int) {
+func DispatchExampleData(
+	iteration int,
+	requestChan chan<- *api.Request,
+	responseChan chan<- *api.Response,
+	logChan chan<- *log.ConversionLog,
+) {
 	amount := float64(105 * iteration)
 
 	req := api.Request{
@@ -48,7 +53,7 @@ func DispatchExampleData(iteration int) {
 
 	fmt.Println("Dispatching data ...")
 
-	repository.RequestChan <- &req
-	repository.ResponseChan <- &resp
-	repository.LogChan <- convLog
+	requestChan <- &req
+	responseChan <- &resp
+	logChan <- convLog
 }

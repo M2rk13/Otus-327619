@@ -1,13 +1,19 @@
-package dispatcher
+package service
 
 import (
 	"fmt"
-	repository "github.com/M2rk13/Otus-327619/internal/repository"
 	"sync"
 	"time"
+
+	"github.com/M2rk13/Otus-327619/internal/repository"
 )
 
-func StartSliceLogger(wg *sync.WaitGroup) {
+func StartSliceLogger(
+	wg *sync.WaitGroup,
+	requestChanState *int,
+	responseChanState *int,
+	logChanState *int,
+) {
 	wg.Add(1)
 
 	go func() {
@@ -53,7 +59,7 @@ func StartSliceLogger(wg *sync.WaitGroup) {
 				}
 			}
 
-			if repository.RequestChanState == 0 && repository.ResponseChanState == 0 && repository.LogChanState == 0 {
+			if *requestChanState == 0 && *responseChanState == 0 && *logChanState == 0 {
 				return
 			}
 		}

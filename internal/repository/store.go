@@ -1,4 +1,4 @@
-package store
+package repository
 
 import (
 	"fmt"
@@ -6,18 +6,6 @@ import (
 	"github.com/M2rk13/Otus-327619/internal/model/log"
 	"sync"
 	"time"
-)
-
-var (
-	RequestChan  chan *api.Request
-	ResponseChan chan *api.Response
-	LogChan      chan *log.ConversionLog
-)
-
-var (
-	RequestChanState  int
-	ResponseChanState int
-	LogChanState      int
 )
 
 var (
@@ -39,16 +27,8 @@ var (
 )
 
 func init() {
-	RequestChan = make(chan *api.Request, 10)
-	RequestChanState = 1
 	prevRequestsLen = 0
-
-	ResponseChan = make(chan *api.Response, 10)
-	ResponseChanState = 1
 	prevResponsesLen = 0
-
-	LogChan = make(chan *log.ConversionLog, 10)
-	LogChanState = 1
 	prevLogsLen = 0
 }
 
@@ -82,48 +62,26 @@ func GetNewConversionLogs() []*log.ConversionLog {
 	return newItems
 }
 
-func StartStorageGoRoutines(wg *sync.WaitGroup) {
-	wg.Add(3)
+func AddRequest(req *api.Request) {
+	muRequests.Lock()
+	defer muRequests.Unlock()
 
-	go func() {
-		defer wg.Done()
+	conversionRequests = append(conversionRequests, req)
+	fmt.Printf("Added ConversionRequest: From=%s, To=%s, Amount=%.2f\n", req.From, req.To, req.Amount)
+}
 
-		for req := range RequestChan {
-			muRequests.Lock()
-			conversionRequests = append(conversionRequests, req)
-			muRequests.Unlock()
+func AddResponse(resp *api.Response) {
+	muResponses.Lock()
+	defer muResponses.Unlock()
 
-			fmt.Printf("Added ConversionRequest: From=%s, To=%s, Amount=%.2f\n", req.From, req.To, req.Amount)
-		}
+	conversionResponses = append(conversionResponses, resp)
+	fmt.Printf("Added ConversionResponse: Success=%t, Result=%.2f\n", resp.Success, resp.Result)
+}
 
-		fmt.Println("Request storage goroutine finished.")
-	}()
+func AddLog(convLog *log.ConversionLog) {
+	muLogs.Lock()
+	defer muLogs.Unlock()
 
-	go func() {
-		defer wg.Done()
-
-		for resp := range ResponseChan {
-			muResponses.Lock()
-			conversionResponses = append(conversionResponses, resp)
-			muResponses.Unlock()
-
-			fmt.Printf("Added ConversionResponse: Success=%t, Result=%.2f\n", resp.Success, resp.Result)
-		}
-
-		fmt.Println("Response storage goroutine finished.")
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		for convLog := range LogChan {
-			muLogs.Lock()
-			conversionLogs = append(conversionLogs, convLog)
-			muLogs.Unlock()
-
-			fmt.Printf("Added ConversionLog: ID=%s, Timestamp=%s\n", convLog.ID(), convLog.Timestamp().Format(time.RFC3339))
-		}
-
-		fmt.Println("Log storage goroutine finished.")
-	}()
+	conversionLogs = append(conversionLogs, convLog)
+	fmt.Printf("Added ConversionLog: ID=%s, Timestamp=%s\n", convLog.ID(), convLog.Timestamp().Format(time.RFC3339))
 }
