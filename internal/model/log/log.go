@@ -6,37 +6,17 @@ import (
 )
 
 type ConversionLog struct {
-	id        string
-	timestamp time.Time
-	request   api.Request
-	response  api.Response
+	Id        string
+	Timestamp time.Time
+	Request   api.Request
+	Response  api.Response
 }
 
 func NewConversionLog(id string, req api.Request, resp api.Response) *ConversionLog {
 	return &ConversionLog{
-		id:        id,
-		timestamp: time.Now(),
-		request:   req,
-		response:  resp,
+		Id:        id,
+		Timestamp: time.Now(),
+		Request:   req,
+		Response:  resp,
 	}
-}
-
-func (cl *ConversionLog) ID() string {
-	return cl.id
-}
-
-func (cl *ConversionLog) Timestamp() time.Time {
-	return cl.timestamp
-}
-
-func (cl *ConversionLog) Request() api.Request {
-	return cl.request
-}
-
-func (cl *ConversionLog) Response() api.Response {
-	return cl.response
-}
-
-func (cl *ConversionLog) SetResponse(resp api.Response) {
-	cl.response = resp
 }

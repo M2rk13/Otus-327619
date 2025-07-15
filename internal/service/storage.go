@@ -26,14 +26,14 @@ func StartStorageService(
 			select {
 			case req, ok := <-requestChan:
 				if !ok {
-					fmt.Println("Request storage goroutine finished.")
+					fmt.Println("GetRequest storage goroutine finished.")
 
 					return
 				}
 
 				repository.AddRequest(req)
 			case <-ctx.Done():
-				fmt.Println("Request storage goroutine stopped by context.")
+				fmt.Println("GetRequest storage goroutine stopped by context.")
 
 				return
 			}
@@ -47,14 +47,14 @@ func StartStorageService(
 			select {
 			case resp, ok := <-responseChan:
 				if !ok {
-					fmt.Println("Response storage goroutine finished.")
+					fmt.Println("GetResponse storage goroutine finished.")
 
 					return
 				}
 
 				repository.AddResponse(resp)
 			case <-ctx.Done():
-				fmt.Println("Response storage goroutine stopped by context.")
+				fmt.Println("GetResponse storage goroutine stopped by context.")
 
 				return
 			}
