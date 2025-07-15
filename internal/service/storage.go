@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -11,6 +12,7 @@ import (
 
 func StartStorageService(
 	wg *sync.WaitGroup,
+	ctx context.Context,
 	requestChan <-chan *api.Request,
 	responseChan <-chan *api.Response,
 	logChan <-chan *log.ConversionLog,
@@ -20,30 +22,63 @@ func StartStorageService(
 	go func() {
 		defer wg.Done()
 
-		for req := range requestChan {
-			repository.AddRequest(req)
-		}
+		for {
+			select {
+			case req, ok := <-requestChan:
+				if !ok {
+					fmt.Println("Request storage goroutine finished.")
 
-		fmt.Println("Request storage goroutine finished.")
+					return
+				}
+
+				repository.AddRequest(req)
+			case <-ctx.Done():
+				fmt.Println("Request storage goroutine stopped by context.")
+
+				return
+			}
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		for resp := range responseChan {
-			repository.AddResponse(resp)
-		}
+		for {
+			select {
+			case resp, ok := <-responseChan:
+				if !ok {
+					fmt.Println("Response storage goroutine finished.")
 
-		fmt.Println("Response storage goroutine finished.")
+					return
+				}
+
+				repository.AddResponse(resp)
+			case <-ctx.Done():
+				fmt.Println("Response storage goroutine stopped by context.")
+
+				return
+			}
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		for convLog := range logChan {
-			repository.AddLog(convLog)
-		}
+		for {
+			select {
+			case convLog, ok := <-logChan:
+				if !ok {
+					fmt.Println("Log storage goroutine finished.")
 
-		fmt.Println("Log storage goroutine finished.")
+					return
+				}
+
+				repository.AddLog(convLog)
+			case <-ctx.Done():
+				fmt.Println("Log storage goroutine stopped by context.")
+
+				return
+			}
+		}
 	}()
 }

@@ -8,80 +8,63 @@ import (
 	"time"
 )
 
-var (
-	conversionRequests  []*api.Request
-	conversionResponses []*api.Response
-	conversionLogs      []*log.ConversionLog
-)
+type repositoryItem[T any] struct {
+	data     []T
+	mu       sync.Mutex
+	lastRead int
+}
 
 var (
-	muRequests  sync.Mutex
-	muResponses sync.Mutex
-	muLogs      sync.Mutex
-)
-
-var (
-	prevRequestsLen  int
-	prevResponsesLen int
-	prevLogsLen      int
+	requestsItem  *repositoryItem[*api.Request]
+	responsesItem *repositoryItem[*api.Response]
+	logsItem      *repositoryItem[*log.ConversionLog]
 )
 
 func init() {
-	prevRequestsLen = 0
-	prevResponsesLen = 0
-	prevLogsLen = 0
+	requestsItem = &repositoryItem[*api.Request]{}
+	responsesItem = &repositoryItem[*api.Response]{}
+	logsItem = &repositoryItem[*log.ConversionLog]{}
+}
+
+func (ri *repositoryItem[T]) getNew() []T {
+	ri.mu.Lock()
+	defer ri.mu.Unlock()
+
+	newItems := ri.data[ri.lastRead:]
+	ri.lastRead = len(ri.data)
+
+	return newItems
+}
+
+func (ri *repositoryItem[T]) add(item T) {
+	ri.mu.Lock()
+	defer ri.mu.Unlock()
+	ri.data = append(ri.data, item)
 }
 
 func GetNewConversionRequests() []*api.Request {
-	muRequests.Lock()
-	defer muRequests.Unlock()
-
-	newItems := conversionRequests[prevRequestsLen:]
-	prevRequestsLen = len(conversionRequests)
-
-	return newItems
+	return requestsItem.getNew()
 }
 
 func GetNewConversionResponses() []*api.Response {
-	muResponses.Lock()
-	defer muResponses.Unlock()
-
-	newItems := conversionResponses[prevResponsesLen:]
-	prevResponsesLen = len(conversionResponses)
-
-	return newItems
+	return responsesItem.getNew()
 }
 
 func GetNewConversionLogs() []*log.ConversionLog {
-	muLogs.Lock()
-	defer muLogs.Unlock()
-
-	newItems := conversionLogs[prevLogsLen:]
-	prevLogsLen = len(conversionLogs)
-
-	return newItems
+	return logsItem.getNew()
 }
 
 func AddRequest(req *api.Request) {
-	muRequests.Lock()
-	defer muRequests.Unlock()
-
-	conversionRequests = append(conversionRequests, req)
+	requestsItem.add(req)
 	fmt.Printf("Added ConversionRequest: From=%s, To=%s, Amount=%.2f\n", req.From, req.To, req.Amount)
 }
 
 func AddResponse(resp *api.Response) {
-	muResponses.Lock()
-	defer muResponses.Unlock()
-
-	conversionResponses = append(conversionResponses, resp)
+	responsesItem.add(resp)
 	fmt.Printf("Added ConversionResponse: Success=%t, Result=%.2f\n", resp.Success, resp.Result)
 }
 
 func AddLog(convLog *log.ConversionLog) {
-	muLogs.Lock()
-	defer muLogs.Unlock()
-
-	conversionLogs = append(conversionLogs, convLog)
+	logsItem.add(convLog)
 	fmt.Printf("Added ConversionLog: ID=%s, Timestamp=%s\n", convLog.ID(), convLog.Timestamp().Format(time.RFC3339))
 }
