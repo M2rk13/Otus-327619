@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/M2rk13/Otus-327619/internal/repository"
 	"os"
 	"os/signal"
 	"sync"
@@ -45,7 +46,9 @@ func main() {
 
 	appTimeOut := 10 * time.Second
 	ctx, cancelFunc := context.WithTimeout(context.Background(), appTimeOut)
+
 	defer cancelFunc()
+	defer repository.ClosePersistence()
 
 	wg.Add(1)
 
