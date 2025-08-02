@@ -34,7 +34,7 @@ func StartSliceLogger(
 					fmt.Println("--- New Conversion Requests ---")
 
 					for _, req := range newRequests {
-						fmt.Printf("  Request: From=%s, To=%s, Amount=%.2f\n", req.From, req.To, req.Amount)
+						fmt.Printf("Request: From=%s, To=%s, Amount=%.2f\n", req.From, req.To, req.Amount)
 					}
 				}
 
@@ -44,7 +44,7 @@ func StartSliceLogger(
 					fmt.Println("--- New Conversion Responses ---")
 
 					for _, resp := range newResponses {
-						fmt.Printf("  Response: Success=%t, Result=%.2f\n", resp.Success, resp.Result)
+						fmt.Printf("Response: Success=%t, Result=%.2f\n", resp.Success, resp.Result)
 					}
 				}
 
@@ -55,11 +55,11 @@ func StartSliceLogger(
 
 					for _, l := range newLogs {
 						fmt.Printf(
-							"  Log: ID=%s, Timestamp=%s, RequestFrom=%s, ResponseResult=%.2f\n",
-							l.ID(),
-							l.Timestamp().Format(time.RFC3339),
-							l.Request().From,
-							l.Response().Result)
+							"  Log: GetId=%s, GetTimestamp=%s, RequestFrom=%s, ResponseResult=%.2f\n",
+							l.Id,
+							l.Timestamp.Format(time.RFC3339),
+							l.Request.From,
+							l.Response.Result)
 					}
 				}
 
