@@ -6,6 +6,8 @@ import (
 
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	"github.com/M2rk13/Otus-327619/internal/model/log"
+
+	"github.com/google/uuid"
 )
 
 func DispatchExampleData(
@@ -17,6 +19,7 @@ func DispatchExampleData(
 	amount := float64(105 * iteration)
 
 	req := api.Request{
+		Id:     uuid.New().String(),
 		From:   "USD",
 		To:     "EUR",
 		Amount: amount,
@@ -31,6 +34,7 @@ func DispatchExampleData(
 
 	if iteration%2 == 0 {
 		resp = api.Response{
+			Id:      uuid.New().String(),
 			Success: true,
 			Terms:   "https://exchangerate.host/terms",
 			Privacy: "https://exchangerate.host/privacy",
@@ -40,6 +44,7 @@ func DispatchExampleData(
 		}
 	} else {
 		resp = api.Response{
+			Id:      uuid.New().String(),
 			Success: false,
 			Terms:   "https://exchangerate.host/terms",
 			Privacy: "https://exchangerate.host/privacy",
@@ -49,7 +54,7 @@ func DispatchExampleData(
 		}
 	}
 
-	convLog := log.NewConversionLog(fmt.Sprintf("log_%03d", iteration+1), req, resp)
+	convLog := log.NewConversionLog(uuid.New().String(), req, resp)
 
 	fmt.Println("Dispatching data ...")
 
