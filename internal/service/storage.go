@@ -31,7 +31,7 @@ func StartStorageService(
 					return
 				}
 
-				repository.AddRequest(req)
+				repository.CreateRequest(req)
 			case <-ctx.Done():
 				fmt.Println("Request storage goroutine stopped by context.")
 
@@ -52,7 +52,7 @@ func StartStorageService(
 					return
 				}
 
-				repository.AddResponse(resp)
+				repository.CreateResponse(resp)
 			case <-ctx.Done():
 				fmt.Println("Response storage goroutine stopped by context.")
 
@@ -73,7 +73,7 @@ func StartStorageService(
 					return
 				}
 
-				repository.AddLog(convLog)
+				repository.CreateConversionLog(convLog)
 			case <-ctx.Done():
 				fmt.Println("Log storage goroutine stopped by context.")
 
