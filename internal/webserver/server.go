@@ -8,7 +8,11 @@ import (
 	"sync"
 	"time"
 
+	_ "github.com/M2rk13/Otus-327619/docs"
+
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 )
 
 func StartWebServer(ctx context.Context, wg *sync.WaitGroup, addr string) {
@@ -19,23 +23,29 @@ func StartWebServer(ctx context.Context, wg *sync.WaitGroup, addr string) {
 		gin.SetMode(gin.ReleaseMode)
 		router := gin.Default()
 
-		router.POST("/api/requests", createHandler(requestService))
-		router.PUT("/api/requests/:id", updateHandler(requestService))
-		router.GET("/api/requests", getAllHandler(requestService))
-		router.GET("/api/requests/:id", getByIDHandler(requestService))
-		router.DELETE("/api/requests/:id", deleteHandler(requestService))
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		router.POST("/api/auth/login", loginHandler)
 
-		router.POST("/api/responses", createHandler(responseService))
-		router.PUT("/api/responses/:id", updateHandler(responseService))
-		router.GET("/api/responses", getAllHandler(responseService))
-		router.GET("/api/responses/:id", getByIDHandler(responseService))
-		router.DELETE("/api/responses/:id", deleteHandler(responseService))
+		protected := router.Group("/api")
+		protected.Use(authMiddleware())
 
-		router.POST("/api/logs", createHandler(logService))
-		router.PUT("/api/logs/:id", updateHandler(logService))
-		router.GET("/api/logs", getAllHandler(logService))
-		router.GET("/api/logs/:id", getByIDHandler(logService))
-		router.DELETE("/api/logs/:id", deleteHandler(logService))
+		protected.POST("/requests", createRequest)
+		protected.PUT("/requests/:id", updateRequest)
+		router.GET("/api/requests", getAllRequests)
+		router.GET("/api/requests/:id", getRequestByID)
+		protected.DELETE("/requests/:id", deleteRequest)
+
+		protected.POST("/responses", createResponse)
+		protected.PUT("/responses/:id", updateResponse)
+		router.GET("/api/responses", getAllResponses)
+		router.GET("/api/responses/:id", getResponseByID)
+		protected.DELETE("/responses/:id", deleteResponse)
+
+		protected.POST("/logs", createLog)
+		protected.PUT("/logs/:id", updateLog)
+		router.GET("/api/logs", getAllLogs)
+		router.GET("/api/logs/:id", getLogByID)
+		protected.DELETE("/logs/:id", deleteLog)
 
 		server := &http.Server{
 			Addr:    addr,
