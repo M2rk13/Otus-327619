@@ -35,11 +35,9 @@ type Identifiable interface {
 }
 
 func init() {
-	fileConfig := config.LoadConfig()
-
-	requestsItem = &repositoryItem[*api.Request]{filePath: fileConfig.RequestsFilePath}
-	responsesItem = &repositoryItem[*api.Response]{filePath: fileConfig.ResponsesFilePath}
-	logsItem = &repositoryItem[*logmodel.ConversionLog]{filePath: fileConfig.LogsFilePath}
+	requestsItem = &repositoryItem[*api.Request]{filePath: config.FileCfg.RequestsFilePath}
+	responsesItem = &repositoryItem[*api.Response]{filePath: config.FileCfg.ResponsesFilePath}
+	logsItem = &repositoryItem[*logmodel.ConversionLog]{filePath: config.FileCfg.LogsFilePath}
 
 	if err := setupPersistence(requestsItem); err != nil {
 		log.Fatalf("Failed to setup persistence for requests: %v", err)

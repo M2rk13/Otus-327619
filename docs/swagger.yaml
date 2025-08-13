@@ -1,0 +1,535 @@
+definitions:
+  api.Info:
+    properties:
+      quote:
+        type: number
+      timestamp:
+        type: integer
+    type: object
+  api.Request:
+    properties:
+      amount:
+        type: number
+      from:
+        type: string
+      id:
+        type: string
+      to:
+        type: string
+    type: object
+  api.Response:
+    properties:
+      id:
+        type: string
+      info:
+        $ref: '#/definitions/api.Info'
+      privacy:
+        type: string
+      query:
+        $ref: '#/definitions/api.Request'
+      result:
+        type: number
+      success:
+        type: boolean
+      terms:
+        type: string
+    type: object
+  log.ConversionLog:
+    properties:
+      id:
+        type: string
+      request:
+        $ref: '#/definitions/api.Request'
+      response:
+        $ref: '#/definitions/api.Response'
+      timestamp:
+        type: string
+    type: object
+  webserver.loginCredentials:
+    properties:
+      login:
+        example: admin
+        type: string
+      password:
+        example: secret
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token
+      parameters:
+      - description: User login and password
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/webserver.loginCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              token:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /logs:
+    get:
+      description: Retrieves all conversion logs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/log.ConversionLog'
+            type: array
+      summary: Get all logs
+      tags:
+      - logs
+    post:
+      consumes:
+      - application/json
+      description: Creates a new conversion log record
+      parameters:
+      - description: Log to create
+        in: body
+        name: log
+        required: true
+        schema:
+          $ref: '#/definitions/log.ConversionLog'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/log.ConversionLog'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create log record
+      tags:
+      - logs
+  /logs/{id}:
+    delete:
+      description: Deletes a conversion log by ID
+      parameters:
+      - description: Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete log
+      tags:
+      - logs
+    get:
+      description: Retrieves a conversion log by its ID
+      parameters:
+      - description: Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/log.ConversionLog'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Get log by ID
+      tags:
+      - logs
+    put:
+      consumes:
+      - application/json
+      description: Updates a conversion log by ID
+      parameters:
+      - description: Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated log
+        in: body
+        name: log
+        required: true
+        schema:
+          $ref: '#/definitions/log.ConversionLog'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/log.ConversionLog'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update log
+      tags:
+      - logs
+  /requests:
+    get:
+      description: Retrieves all requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.Request'
+            type: array
+      summary: Get all requests
+      tags:
+      - requests
+    post:
+      consumes:
+      - application/json
+      description: Creates a new currency conversion request
+      parameters:
+      - description: Request to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.Request'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.Request'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create request
+      tags:
+      - requests
+  /requests/{id}:
+    delete:
+      description: Deletes a request by ID
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete request
+      tags:
+      - requests
+    get:
+      description: Retrieves a request by its ID
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Request'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Get request by ID
+      tags:
+      - requests
+    put:
+      consumes:
+      - application/json
+      description: Updates a request by ID
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Request'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update request
+      tags:
+      - requests
+  /responses:
+    get:
+      description: Retrieves all responses
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.Response'
+            type: array
+      summary: Get all responses
+      tags:
+      - responses
+    post:
+      consumes:
+      - application/json
+      description: Creates a new conversion response
+      parameters:
+      - description: Response to create
+        in: body
+        name: response
+        required: true
+        schema:
+          $ref: '#/definitions/api.Response'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.Response'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create response
+      tags:
+      - responses
+  /responses/{id}:
+    delete:
+      description: Deletes a response by ID
+      parameters:
+      - description: Response ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete response
+      tags:
+      - responses
+    get:
+      description: Retrieves a response by its ID
+      parameters:
+      - description: Response ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Response'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Get response by ID
+      tags:
+      - responses
+    put:
+      consumes:
+      - application/json
+      description: Updates a response by ID
+      parameters:
+      - description: Response ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated response
+        in: body
+        name: response
+        required: true
+        schema:
+          $ref: '#/definitions/api.Response'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Response'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update response
+      tags:
+      - responses
+swagger: "2.0"

@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "github.com/M2rk13/Otus-327619/internal/bootstrap"
+
 	"context"
 	"fmt"
 	"os"

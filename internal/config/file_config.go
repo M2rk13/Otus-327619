@@ -12,7 +12,11 @@ type FileConfig struct {
 	LogsFilePath      string
 }
 
-func LoadConfig() FileConfig {
+var (
+	FileCfg FileConfig
+)
+
+func LoadFileConfig() FileConfig {
 	cfg := FileConfig{
 		RequestsFilePath:  os.Getenv("REQUESTS_FILE_PATH"),
 		ResponsesFilePath: os.Getenv("RESPONSES_FILE_PATH"),
