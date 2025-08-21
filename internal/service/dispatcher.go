@@ -10,7 +10,13 @@ import (
 	"github.com/google/uuid"
 )
 
-func DispatchExampleData(
+type DispatcherService struct{}
+
+func NewDispatcherService() *DispatcherService {
+	return &DispatcherService{}
+}
+
+func (d *DispatcherService) DispatchExampleData(
 	iteration int,
 	requestChan chan<- *api.Request,
 	responseChan chan<- *api.Response,

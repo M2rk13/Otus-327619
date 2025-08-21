@@ -5,6 +5,7 @@ import (
 
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -12,7 +13,7 @@ import (
 	"time"
 
 	"github.com/M2rk13/Otus-327619/internal/model/api"
-	"github.com/M2rk13/Otus-327619/internal/model/log"
+	logmodel "github.com/M2rk13/Otus-327619/internal/model/log"
 	"github.com/M2rk13/Otus-327619/internal/repository"
 	"github.com/M2rk13/Otus-327619/internal/service"
 	"github.com/M2rk13/Otus-327619/internal/webserver"
@@ -26,7 +27,7 @@ type chanItem[T any] struct {
 var (
 	requestChan  *chanItem[*api.Request]
 	responseChan *chanItem[*api.Response]
-	logChan      *chanItem[*log.ConversionLog]
+	logChan      *chanItem[*logmodel.ConversionLog]
 )
 
 func init() {
@@ -38,15 +39,25 @@ func init() {
 	responseChan.ch = make(chan *api.Response, 10)
 	responseChan.state = 1
 
-	logChan = &chanItem[*log.ConversionLog]{}
-	logChan.ch = make(chan *log.ConversionLog, 10)
+	logChan = &chanItem[*logmodel.ConversionLog]{}
+	logChan.ch = make(chan *logmodel.ConversionLog, 10)
 	logChan.state = 1
 }
 
 func main() {
 	var wg sync.WaitGroup
 
-	defer repository.ClosePersistence()
+	store := repository.NewFileStore()
+
+	if err := store.SetupPersistence(); err != nil {
+		log.Fatalf("Failed to setup persistence: %v", err)
+	}
+
+	defer store.ClosePersistence()
+
+	dispatcherService := service.NewDispatcherService()
+	storageService := service.NewStorageService(store)
+	loggerService := service.NewLoggerService(store)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -67,19 +78,19 @@ func main() {
 		}
 	}()
 
-	service.StartStorageService(&wg, ctx, requestChan.ch, responseChan.ch, logChan.ch)
-	service.StartSliceLogger(&wg, ctx, &requestChan.state, &responseChan.state, &logChan.state)
-	webserver.StartWebServer(ctx, &wg, ":8080")
+	storageService.StartStorageService(&wg, ctx, requestChan.ch, responseChan.ch, logChan.ch)
+	loggerService.StartSliceLogger(&wg, ctx, &requestChan.state, &responseChan.state, &logChan.state)
+	webserver.StartWebServer(ctx, &wg, ":8080", storageService)
 
 	wg.Add(1)
-	go doForever(&wg, ctx)
+	go doForever(&wg, ctx, dispatcherService)
 
 	wg.Wait()
 
 	fmt.Print("Finished application. All goroutines completed.\n")
 }
 
-func doForever(wg *sync.WaitGroup, ctx context.Context) {
+func doForever(wg *sync.WaitGroup, ctx context.Context, dispatcher *service.DispatcherService) {
 	defer wg.Done()
 
 	for i := 0; i < 5; i++ {
@@ -89,7 +100,7 @@ func doForever(wg *sync.WaitGroup, ctx context.Context) {
 
 			return
 		default:
-			service.DispatchExampleData(i, requestChan.ch, responseChan.ch, logChan.ch)
+			dispatcher.DispatchExampleData(i, requestChan.ch, responseChan.ch, logChan.ch)
 			time.Sleep(500 * time.Millisecond)
 			fmt.Printf("Iteration %d finished.\n", i+1)
 		}

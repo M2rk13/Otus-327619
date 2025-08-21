@@ -7,126 +7,18 @@ import (
 
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	"github.com/M2rk13/Otus-327619/internal/model/log"
-	"github.com/M2rk13/Otus-327619/internal/repository"
+	"github.com/M2rk13/Otus-327619/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
-type crudService[T any] interface {
-	Create(T)
-	GetByID(string) T
-	GetAll() []T
-	Update(T) bool
-	Delete(string) bool
+type APIHandler struct {
+	storageSvc *service.StorageService
 }
 
-func createHandler[T any](repo crudService[T]) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var newItem T
-
-		if err := c.ShouldBindJSON(&newItem); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
-
-			return
-		}
-
-		repo.Create(newItem)
-		c.JSON(http.StatusCreated, newItem)
-	}
+func NewAPIHandler(storageSvc *service.StorageService) *APIHandler {
+	return &APIHandler{storageSvc: storageSvc}
 }
-
-func getByIDHandler[T any](repo crudService[T]) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.Param("id")
-		item := repo.GetByID(id)
-
-		if reflect.ValueOf(item).IsNil() {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
-
-			return
-		}
-
-		c.JSON(http.StatusOK, item)
-	}
-}
-
-func getAllHandler[T any](repo crudService[T]) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		items := repo.GetAll()
-		c.JSON(http.StatusOK, items)
-	}
-}
-
-func updateHandler[T any](repo crudService[T]) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.Param("id")
-		var updatedItem T
-
-		if err := c.ShouldBindJSON(&updatedItem); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
-
-			return
-		}
-
-		v := reflect.ValueOf(updatedItem).Elem().FieldByName("Id")
-
-		if v.IsValid() && v.String() != id {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Id in body must match Id in path"})
-
-			return
-		}
-
-		if repo.Update(updatedItem) {
-			c.JSON(http.StatusOK, updatedItem)
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
-		}
-	}
-}
-
-func deleteHandler[T any](repo crudService[T]) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.Param("id")
-
-		if repo.Delete(id) {
-			c.JSON(http.StatusOK, gin.H{"message": "Item deleted successfully"})
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
-		}
-	}
-}
-
-type RequestService struct{}
-
-func (s *RequestService) Create(req *api.Request)        { repository.CreateRequest(req) }
-func (s *RequestService) GetByID(id string) *api.Request { return repository.GetRequestByID(id) }
-func (s *RequestService) GetAll() []*api.Request         { return repository.GetAllRequests() }
-func (s *RequestService) Update(req *api.Request) bool   { return repository.UpdateRequest(req) }
-func (s *RequestService) Delete(id string) bool          { return repository.DeleteRequest(id) }
-
-type ResponseService struct{}
-
-func (s *ResponseService) Create(resp *api.Response)       { repository.CreateResponse(resp) }
-func (s *ResponseService) GetByID(id string) *api.Response { return repository.GetResponseByID(id) }
-func (s *ResponseService) GetAll() []*api.Response         { return repository.GetAllResponses() }
-func (s *ResponseService) Update(resp *api.Response) bool  { return repository.UpdateResponse(resp) }
-func (s *ResponseService) Delete(id string) bool           { return repository.DeleteResponse(id) }
-
-type LogService struct{}
-
-func (s *LogService) Create(log *log.ConversionLog) { repository.CreateConversionLog(log) }
-func (s *LogService) GetByID(id string) *log.ConversionLog {
-	return repository.GetConversionLogByID(id)
-}
-func (s *LogService) GetAll() []*log.ConversionLog       { return repository.GetAllConversionLogs() }
-func (s *LogService) Update(log *log.ConversionLog) bool { return repository.UpdateConversionLog(log) }
-func (s *LogService) Delete(id string) bool              { return repository.DeleteConversionLog(id) }
-
-var (
-	requestService  = &RequestService{}
-	responseService = &ResponseService{}
-	logService      = &LogService{}
-)
 
 // @Summary      Create request
 // @Description  Creates a new currency conversion request
@@ -138,8 +30,17 @@ var (
 // @Success      201      {object}  api.Request
 // @Failure      400      {object}  object{error=string}
 // @Router       /requests [post]
-func createRequest(c *gin.Context) {
-	createHandler[*api.Request](requestService)(c)
+func (h *APIHandler) createRequest(c *gin.Context) {
+	var req api.Request
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	h.storageSvc.CreateRequest(&req)
+	c.JSON(http.StatusCreated, req)
 }
 
 // @Summary      Get request by ID
@@ -150,8 +51,17 @@ func createRequest(c *gin.Context) {
 // @Success      200 {object} api.Request
 // @Failure      404 {object} object{error=string}
 // @Router       /requests/{id} [get]
-func getRequestByID(c *gin.Context) {
-	getByIDHandler[*api.Request](requestService)(c)
+func (h *APIHandler) getRequestByID(c *gin.Context) {
+	id := c.Param("id")
+	item := h.storageSvc.GetRequestByID(id)
+
+	if item == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
 }
 
 // @Summary      Get all requests
@@ -160,8 +70,9 @@ func getRequestByID(c *gin.Context) {
 // @Produce      json
 // @Success      200 {array}  api.Request
 // @Router       /requests [get]
-func getAllRequests(c *gin.Context) {
-	getAllHandler[*api.Request](requestService)(c)
+func (h *APIHandler) getAllRequests(c *gin.Context) {
+	items := h.storageSvc.GetAllRequests()
+	c.JSON(http.StatusOK, items)
 }
 
 // @Summary      Update request
@@ -176,8 +87,29 @@ func getAllRequests(c *gin.Context) {
 // @Failure      400      {object}  object{error=string}
 // @Failure      404      {object}  object{error=string}
 // @Router       /requests/{id} [put]
-func updateRequest(c *gin.Context) {
-	updateHandler[*api.Request](requestService)(c)
+func (h *APIHandler) updateRequest(c *gin.Context) {
+	id := c.Param("id")
+	var updatedItem api.Request
+
+	if err := c.ShouldBindJSON(&updatedItem); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	v := reflect.ValueOf(updatedItem).Elem().FieldByName("Id")
+
+	if v.IsValid() && v.String() != id {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Id in body must match Id in path"})
+
+		return
+	}
+
+	if h.storageSvc.UpdateRequest(&updatedItem) {
+		c.JSON(http.StatusOK, updatedItem)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }
 
 // @Summary      Delete request
@@ -189,8 +121,14 @@ func updateRequest(c *gin.Context) {
 // @Success      200 {object} object{message=string}
 // @Failure      404 {object} object{error=string}
 // @Router       /requests/{id} [delete]
-func deleteRequest(c *gin.Context) {
-	deleteHandler[*api.Request](requestService)(c)
+func (h *APIHandler) deleteRequest(c *gin.Context) {
+	id := c.Param("id")
+
+	if h.storageSvc.DeleteRequest(id) {
+		c.JSON(http.StatusOK, gin.H{"message": "Item deleted successfully"})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }
 
 // @Summary      Create response
@@ -203,8 +141,17 @@ func deleteRequest(c *gin.Context) {
 // @Success      201       {object}  api.Response
 // @Failure      400       {object}  object{error=string}
 // @Router       /responses [post]
-func createResponse(c *gin.Context) {
-	createHandler[*api.Response](responseService)(c)
+func (h *APIHandler) createResponse(c *gin.Context) {
+	var resp api.Response
+
+	if err := c.ShouldBindJSON(&resp); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	h.storageSvc.CreateResponse(&resp)
+	c.JSON(http.StatusCreated, resp)
 }
 
 // @Summary      Get response by ID
@@ -215,8 +162,17 @@ func createResponse(c *gin.Context) {
 // @Success      200 {object} api.Response
 // @Failure      404 {object} object{error=string}
 // @Router       /responses/{id} [get]
-func getResponseByID(c *gin.Context) {
-	getByIDHandler[*api.Response](responseService)(c)
+func (h *APIHandler) getResponseByID(c *gin.Context) {
+	id := c.Param("id")
+	item := h.storageSvc.GetResponseByID(id)
+
+	if item == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
 }
 
 // @Summary      Get all responses
@@ -225,8 +181,9 @@ func getResponseByID(c *gin.Context) {
 // @Produce      json
 // @Success      200 {array}  api.Response
 // @Router       /responses [get]
-func getAllResponses(c *gin.Context) {
-	getAllHandler[*api.Response](responseService)(c)
+func (h *APIHandler) getAllResponses(c *gin.Context) {
+	items := h.storageSvc.GetAllResponses()
+	c.JSON(http.StatusOK, items)
 }
 
 // @Summary      Update response
@@ -241,8 +198,27 @@ func getAllResponses(c *gin.Context) {
 // @Failure      400       {object}  object{error=string}
 // @Failure      404       {object}  object{error=string}
 // @Router       /responses/{id} [put]
-func updateResponse(c *gin.Context) {
-	updateHandler[*api.Response](responseService)(c)
+func (h *APIHandler) updateResponse(c *gin.Context) {
+	id := c.Param("id")
+	var updatedItem api.Response
+
+	if err := c.ShouldBindJSON(&updatedItem); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	if updatedItem.Id != id {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Id in body must match Id in path"})
+
+		return
+	}
+
+	if h.storageSvc.UpdateResponse(&updatedItem) {
+		c.JSON(http.StatusOK, updatedItem)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }
 
 // @Summary      Delete response
@@ -254,8 +230,14 @@ func updateResponse(c *gin.Context) {
 // @Success      200 {object} object{message=string}
 // @Failure      404 {object} object{error=string}
 // @Router       /responses/{id} [delete]
-func deleteResponse(c *gin.Context) {
-	deleteHandler[*api.Response](responseService)(c)
+func (h *APIHandler) deleteResponse(c *gin.Context) {
+	id := c.Param("id")
+
+	if h.storageSvc.DeleteResponse(id) {
+		c.JSON(http.StatusOK, gin.H{"message": "Item deleted successfully"})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }
 
 // @Summary      Create log record
@@ -268,8 +250,17 @@ func deleteResponse(c *gin.Context) {
 // @Success      201  {object}  log.ConversionLog
 // @Failure      400  {object}  object{error=string}
 // @Router       /logs [post]
-func createLog(c *gin.Context) {
-	createHandler[*log.ConversionLog](logService)(c)
+func (h *APIHandler) createLog(c *gin.Context) {
+	var logItem log.ConversionLog
+
+	if err := c.ShouldBindJSON(&logItem); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	h.storageSvc.CreateConversionLog(&logItem)
+	c.JSON(http.StatusCreated, logItem)
 }
 
 // @Summary      Get log by ID
@@ -280,8 +271,17 @@ func createLog(c *gin.Context) {
 // @Success      200 {object} log.ConversionLog
 // @Failure      404 {object} object{error=string}
 // @Router       /logs/{id} [get]
-func getLogByID(c *gin.Context) {
-	getByIDHandler[*log.ConversionLog](logService)(c)
+func (h *APIHandler) getLogByID(c *gin.Context) {
+	id := c.Param("id")
+	item := h.storageSvc.GetConversionLogByID(id)
+
+	if item == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
 }
 
 // @Summary      Get all logs
@@ -290,8 +290,9 @@ func getLogByID(c *gin.Context) {
 // @Produce      json
 // @Success      200 {array}  log.ConversionLog
 // @Router       /logs [get]
-func getAllLogs(c *gin.Context) {
-	getAllHandler[*log.ConversionLog](logService)(c)
+func (h *APIHandler) getAllLogs(c *gin.Context) {
+	items := h.storageSvc.GetAllConversionLogs()
+	c.JSON(http.StatusOK, items)
 }
 
 // @Summary      Update log
@@ -306,8 +307,27 @@ func getAllLogs(c *gin.Context) {
 // @Failure      400  {object}  object{error=string}
 // @Failure      404  {object}  object{error=string}
 // @Router       /logs/{id} [put]
-func updateLog(c *gin.Context) {
-	updateHandler[*log.ConversionLog](logService)(c)
+func (h *APIHandler) updateLog(c *gin.Context) {
+	id := c.Param("id")
+	var updatedItem log.ConversionLog
+
+	if err := c.ShouldBindJSON(&updatedItem); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+
+		return
+	}
+
+	if updatedItem.Id != id {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Id in body must match Id in path"})
+
+		return
+	}
+
+	if h.storageSvc.UpdateConversionLog(&updatedItem) {
+		c.JSON(http.StatusOK, updatedItem)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }
 
 // @Summary      Delete log
@@ -319,6 +339,12 @@ func updateLog(c *gin.Context) {
 // @Success      200 {object} object{message=string}
 // @Failure      404 {object} object{error=string}
 // @Router       /logs/{id} [delete]
-func deleteLog(c *gin.Context) {
-	deleteHandler[*log.ConversionLog](logService)(c)
+func (h *APIHandler) deleteLog(c *gin.Context) {
+	id := c.Param("id")
+
+	if h.storageSvc.DeleteConversionLog(id) {
+		c.JSON(http.StatusOK, gin.H{"message": "Item deleted successfully"})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+	}
 }

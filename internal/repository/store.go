@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,31 +23,54 @@ type repositoryItem[T any] struct {
 	file     *os.File
 }
 
-var (
-	requestsItem  *repositoryItem[*api.Request]
-	responsesItem *repositoryItem[*api.Response]
-	logsItem      *repositoryItem[*logmodel.ConversionLog]
-)
-
 type Identifiable interface {
 	GetId() string
 }
 
-func init() {
-	requestsItem = &repositoryItem[*api.Request]{filePath: config.FileCfg.RequestsFilePath}
-	responsesItem = &repositoryItem[*api.Response]{filePath: config.FileCfg.ResponsesFilePath}
-	logsItem = &repositoryItem[*logmodel.ConversionLog]{filePath: config.FileCfg.LogsFilePath}
+type FileStore struct {
+	requestsItem  *repositoryItem[*api.Request]
+	responsesItem *repositoryItem[*api.Response]
+	logsItem      *repositoryItem[*logmodel.ConversionLog]
+}
 
-	if err := setupPersistence(requestsItem); err != nil {
-		log.Fatalf("Failed to setup persistence for requests: %v", err)
+func NewFileStore() *FileStore {
+	return &FileStore{
+		requestsItem:  &repositoryItem[*api.Request]{filePath: config.FileCfg.RequestsFilePath},
+		responsesItem: &repositoryItem[*api.Response]{filePath: config.FileCfg.ResponsesFilePath},
+		logsItem:      &repositoryItem[*logmodel.ConversionLog]{filePath: config.FileCfg.LogsFilePath},
+	}
+}
+
+func (f *FileStore) SetupPersistence() error {
+	if err := setupPersistence(f.requestsItem); err != nil {
+		return fmt.Errorf("failed to setup persistence for requests: %v", err)
 	}
 
-	if err := setupPersistence(responsesItem); err != nil {
-		log.Fatalf("Failed to setup persistence for responses: %v", err)
+	if err := setupPersistence(f.responsesItem); err != nil {
+		return fmt.Errorf("failed to setup persistence for responses: %v", err)
 	}
 
-	if err := setupPersistence(logsItem); err != nil {
-		log.Fatalf("Failed to setup persistence for logs: %v", err)
+	if err := setupPersistence(f.logsItem); err != nil {
+		return fmt.Errorf("failed to setup persistence for logs: %v", err)
+	}
+
+	return nil
+}
+
+func (f *FileStore) ClosePersistence() {
+	if f.requestsItem.file != nil {
+		_ = f.requestsItem.file.Close()
+		fmt.Println("Closed requests persistence file.")
+	}
+
+	if f.responsesItem.file != nil {
+		_ = f.responsesItem.file.Close()
+		fmt.Println("Closed responses persistence file.")
+	}
+
+	if f.logsItem.file != nil {
+		_ = f.logsItem.file.Close()
+		fmt.Println("Closed logs persistence file.")
 	}
 }
 
@@ -112,23 +134,6 @@ func loadDataFromFile[T any](repoItem *repositoryItem[T]) error {
 	return nil
 }
 
-func ClosePersistence() {
-	if requestsItem.file != nil {
-		_ = requestsItem.file.Close()
-		fmt.Println("Closed requests persistence file.")
-	}
-
-	if responsesItem.file != nil {
-		_ = responsesItem.file.Close()
-		fmt.Println("Closed responses persistence file.")
-	}
-
-	if logsItem.file != nil {
-		_ = logsItem.file.Close()
-		fmt.Println("Closed logs persistence file.")
-	}
-}
-
 func (ri *repositoryItem[T]) getNew() []T {
 	ri.mu.Lock()
 	defer ri.mu.Unlock()
@@ -180,6 +185,7 @@ func (ri *repositoryItem[T]) rewriteAllDataToFile() error {
 
 	defer func() {
 		reopenFile, reErr := os.OpenFile(ri.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
 		if reErr != nil {
 			fmt.Printf("CRITICAL: Failed to reopen file %s for appending after rewrite: %v\n", ri.filePath, reErr)
 			ri.file = nil
@@ -209,19 +215,11 @@ func (ri *repositoryItem[T]) rewriteAllDataToFile() error {
 	return writer.Flush()
 }
 
-func genericGetNew[T any](repoItem *repositoryItem[T]) []T {
-	return repoItem.getNew()
-}
-
 func genericGetAll[T any](repoItem *repositoryItem[T]) []T {
 	repoItem.mu.Lock()
 	defer repoItem.mu.Unlock()
 
 	return append([]T{}, repoItem.data...)
-}
-
-func genericAdd[T any](repoItem *repositoryItem[T], item T) {
-	repoItem.add(item)
 }
 
 func genericGetByID[T Identifiable](repoItem *repositoryItem[T], id string) T {
@@ -279,77 +277,77 @@ func genericDelete[T Identifiable](repoItem *repositoryItem[T], id string) bool 
 	return false
 }
 
-func GetNewConversionRequests() []*api.Request {
-	return genericGetNew(requestsItem)
+func (f *FileStore) GetNewConversionRequests() []*api.Request {
+	return f.requestsItem.getNew()
 }
 
-func GetNewConversionResponses() []*api.Response {
-	return genericGetNew(responsesItem)
+func (f *FileStore) GetNewConversionResponses() []*api.Response {
+	return f.responsesItem.getNew()
 }
 
-func GetNewConversionLogs() []*logmodel.ConversionLog {
-	return genericGetNew(logsItem)
+func (f *FileStore) GetNewConversionLogs() []*logmodel.ConversionLog {
+	return f.logsItem.getNew()
 }
 
-func CreateRequest(req *api.Request) {
+func (f *FileStore) CreateRequest(req *api.Request) {
 	req.Id = uuid.New().String()
-	genericAdd(requestsItem, req)
+	f.requestsItem.add(req)
 }
 
-func GetRequestByID(id string) *api.Request {
-	return genericGetByID(requestsItem, id)
+func (f *FileStore) GetRequestByID(id string) *api.Request {
+	return genericGetByID(f.requestsItem, id)
 }
 
-func GetAllRequests() []*api.Request {
-	return genericGetAll(requestsItem)
+func (f *FileStore) GetAllRequests() []*api.Request {
+	return genericGetAll(f.requestsItem)
 }
 
-func UpdateRequest(req *api.Request) bool {
-	return genericUpdate(requestsItem, req)
+func (f *FileStore) UpdateRequest(req *api.Request) bool {
+	return genericUpdate(f.requestsItem, req)
 }
 
-func DeleteRequest(id string) bool {
-	return genericDelete(requestsItem, id)
+func (f *FileStore) DeleteRequest(id string) bool {
+	return genericDelete(f.requestsItem, id)
 }
 
-func CreateResponse(resp *api.Response) {
+func (f *FileStore) CreateResponse(resp *api.Response) {
 	resp.Id = uuid.New().String()
-	genericAdd(responsesItem, resp)
+	f.responsesItem.add(resp)
 }
 
-func GetResponseByID(id string) *api.Response {
-	return genericGetByID(responsesItem, id)
+func (f *FileStore) GetResponseByID(id string) *api.Response {
+	return genericGetByID(f.responsesItem, id)
 }
 
-func GetAllResponses() []*api.Response {
-	return genericGetAll(responsesItem)
+func (f *FileStore) GetAllResponses() []*api.Response {
+	return genericGetAll(f.responsesItem)
 }
 
-func UpdateResponse(resp *api.Response) bool {
-	return genericUpdate(responsesItem, resp)
+func (f *FileStore) UpdateResponse(resp *api.Response) bool {
+	return genericUpdate(f.responsesItem, resp)
 }
 
-func DeleteResponse(id string) bool {
-	return genericDelete(responsesItem, id)
+func (f *FileStore) DeleteResponse(id string) bool {
+	return genericDelete(f.responsesItem, id)
 }
 
-func CreateConversionLog(log *logmodel.ConversionLog) {
-	log.Id = uuid.New().String()
-	genericAdd(logsItem, log)
+func (f *FileStore) CreateConversionLog(logItem *logmodel.ConversionLog) {
+	logItem.Id = uuid.New().String()
+	f.logsItem.add(logItem)
 }
 
-func GetConversionLogByID(id string) *logmodel.ConversionLog {
-	return genericGetByID(logsItem, id)
+func (f *FileStore) GetConversionLogByID(id string) *logmodel.ConversionLog {
+	return genericGetByID(f.logsItem, id)
 }
 
-func GetAllConversionLogs() []*logmodel.ConversionLog {
-	return genericGetAll(logsItem)
+func (f *FileStore) GetAllConversionLogs() []*logmodel.ConversionLog {
+	return genericGetAll(f.logsItem)
 }
 
-func UpdateConversionLog(log *logmodel.ConversionLog) bool {
-	return genericUpdate(logsItem, log)
+func (f *FileStore) UpdateConversionLog(logItem *logmodel.ConversionLog) bool {
+	return genericUpdate(f.logsItem, logItem)
 }
 
-func DeleteConversionLog(id string) bool {
-	return genericDelete(logsItem, id)
+func (f *FileStore) DeleteConversionLog(id string) bool {
+	return genericDelete(f.logsItem, id)
 }
