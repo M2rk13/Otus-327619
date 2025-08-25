@@ -9,7 +9,15 @@ import (
 	"github.com/M2rk13/Otus-327619/internal/repository"
 )
 
-func StartSliceLogger(
+type LoggerService struct {
+	repo repository.Repository
+}
+
+func NewLoggerService(repo repository.Repository) *LoggerService {
+	return &LoggerService{repo: repo}
+}
+
+func (l *LoggerService) StartSliceLogger(
 	wg *sync.WaitGroup,
 	ctx context.Context,
 	requestChanState *int,
@@ -28,7 +36,7 @@ func StartSliceLogger(
 		for {
 			select {
 			case <-ticker.C:
-				newRequests := repository.GetNewConversionRequests()
+				newRequests := l.repo.GetNewConversionRequests()
 
 				if len(newRequests) > 0 {
 					fmt.Println("--- New Conversion Requests ---")
@@ -38,7 +46,7 @@ func StartSliceLogger(
 					}
 				}
 
-				newResponses := repository.GetNewConversionResponses()
+				newResponses := l.repo.GetNewConversionResponses()
 
 				if len(newResponses) > 0 {
 					fmt.Println("--- New Conversion Responses ---")
@@ -48,28 +56,30 @@ func StartSliceLogger(
 					}
 				}
 
-				newLogs := repository.GetNewConversionLogs()
+				newLogs := l.repo.GetNewConversionLogs()
 
 				if len(newLogs) > 0 {
 					fmt.Println("--- New Conversion Logs ---")
 
-					for _, l := range newLogs {
+					for _, logItem := range newLogs {
 						fmt.Printf(
 							"  Log: GetId=%s, GetTimestamp=%s, RequestFrom=%s, ResponseResult=%.2f\n",
-							l.Id,
-							l.Timestamp.Format(time.RFC3339),
-							l.Request.From,
-							l.Response.Result)
+							logItem.Id,
+							logItem.Timestamp.Format(time.RFC3339),
+							logItem.Request.From,
+							logItem.Response.Result)
 					}
 				}
 
 				if *requestChanState == 0 && *responseChanState == 0 && *logChanState == 0 {
 					time.Sleep(250 * time.Millisecond)
 					fmt.Println("All channels closed. Shutting down logger.")
+
 					return
 				}
 			case <-ctx.Done():
 				fmt.Println("Logger stopped due context cancel.")
+
 				return
 			}
 		}
