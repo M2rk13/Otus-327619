@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/M2rk13/Otus-327619/internal/config"
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	logmodel "github.com/M2rk13/Otus-327619/internal/model/log"
 	"github.com/M2rk13/Otus-327619/internal/repository"
@@ -46,21 +47,36 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
-	store := repository.NewFileStore()
+	var store repository.Repository
+	var err error
 
-	if err := store.SetupPersistence(); err != nil {
-		log.Fatalf("Failed to setup persistence: %v", err)
+	log.Printf("Using storage type: %s\n", config.AppCfg.StorageType)
+
+	switch config.AppCfg.StorageType {
+	case "mongo":
+		mongoStore, mongoErr := repository.NewMongoStore(ctx, config.MongoCfg, config.RedisCfg)
+		if mongoErr != nil {
+			log.Fatalf("Failed to setup mongo persistence: %v", mongoErr)
+		}
+		store = mongoStore
+		defer mongoStore.Close(ctx)
+	case "file":
+		fileStore := repository.NewFileStore()
+		if err = fileStore.SetupPersistence(); err != nil {
+			log.Fatalf("Failed to setup file persistence: %v", err)
+		}
+		store = fileStore
+		defer fileStore.ClosePersistence()
+	default:
+		log.Fatalf("Unknown storage type: %s", config.AppCfg.StorageType)
 	}
-
-	defer store.ClosePersistence()
 
 	dispatcherService := service.NewDispatcherService()
 	storageService := service.NewStorageService(store)
 	loggerService := service.NewLoggerService(store)
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 
 	wg.Add(1)
 
