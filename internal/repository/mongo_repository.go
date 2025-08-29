@@ -24,7 +24,7 @@ type MongoStore struct {
 }
 
 func NewMongoStore(ctx context.Context, mongoCfg config.MongoConfig, redisCfg config.RedisConfig) (*MongoStore, error) {
-	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoCfg.URI))
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoCfg.MogoUri))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mongo: %w", err)
@@ -47,7 +47,7 @@ func NewMongoStore(ctx context.Context, mongoCfg config.MongoConfig, redisCfg co
 	return &MongoStore{
 		mongoClient: mongoClient,
 		redisClient: redisClient,
-		dbName:      mongoCfg.Database,
+		dbName:      mongoCfg.MongoDb,
 		redisTTL:    redisCfg.TTL,
 	}, nil
 }
