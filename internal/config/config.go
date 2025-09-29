@@ -1,11 +1,15 @@
 package config
 
 import (
+	_ "github.com/jackc/pgx/v4/stdlib"
+
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/M2rk13/Otus-327619/internal/enum"
 )
 
 type AppConfig struct {
@@ -25,8 +29,8 @@ type FileConfig struct {
 }
 
 type MongoConfig struct {
-	URI      string
-	Database string
+	MogoUri string
+	MongoDb string
 }
 
 type RedisConfig struct {
@@ -35,12 +39,17 @@ type RedisConfig struct {
 	TTL      time.Duration
 }
 
+type PostgresConfig struct {
+	PostgresUri string
+}
+
 var (
-	AppCfg   AppConfig
-	AdminCfg AdminConfig
-	FileCfg  FileConfig
-	MongoCfg MongoConfig
-	RedisCfg RedisConfig
+	AppCfg      AppConfig
+	AdminCfg    AdminConfig
+	FileCfg     FileConfig
+	MongoCfg    MongoConfig
+	RedisCfg    RedisConfig
+	PostgresCfg PostgresConfig
 )
 
 func LoadAll() {
@@ -49,6 +58,7 @@ func LoadAll() {
 	FileCfg = loadFileConfig()
 	MongoCfg = loadMongoConfig()
 	RedisCfg = loadRedisConfig()
+	PostgresCfg = loadPostgresConfig()
 
 	if AdminCfg.Login == "" || AdminCfg.Password == "" || AdminCfg.JwtKey == "" {
 		panic("Admin credentials are required")
@@ -61,7 +71,7 @@ func loadAppConfig() AppConfig {
 	storageType := os.Getenv("STORAGE_TYPE")
 
 	if storageType == "" {
-		storageType = "file"
+		storageType = enum.File
 	}
 
 	return AppConfig{
@@ -101,8 +111,8 @@ func loadFileConfig() FileConfig {
 
 func loadMongoConfig() MongoConfig {
 	return MongoConfig{
-		URI:      os.Getenv("MONGO_URI"),
-		Database: os.Getenv("MONGO_DATABASE"),
+		MogoUri: os.Getenv("MONGO_URI"),
+		MongoDb: os.Getenv("MONGO_DATABASE"),
 	}
 }
 
@@ -118,5 +128,11 @@ func loadRedisConfig() RedisConfig {
 		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		TTL:      time.Duration(ttl) * time.Second,
+	}
+}
+
+func loadPostgresConfig() PostgresConfig {
+	return PostgresConfig{
+		PostgresUri: os.Getenv("POSTGRES_DSN"),
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/M2rk13/Otus-327619/internal/config"
+	"github.com/M2rk13/Otus-327619/internal/enum"
 	"github.com/M2rk13/Otus-327619/internal/model/api"
 	logmodel "github.com/M2rk13/Otus-327619/internal/model/log"
 	"github.com/M2rk13/Otus-327619/internal/repository"
@@ -56,18 +57,31 @@ func main() {
 	log.Printf("Using storage type: %s\n", config.AppCfg.StorageType)
 
 	switch config.AppCfg.StorageType {
-	case "mongo":
+	case enum.Mongo:
 		mongoStore, mongoErr := repository.NewMongoStore(ctx, config.MongoCfg, config.RedisCfg)
+
 		if mongoErr != nil {
 			log.Fatalf("Failed to setup mongo persistence: %v", mongoErr)
 		}
+
 		store = mongoStore
 		defer mongoStore.Close(ctx)
-	case "file":
+	case enum.Postgres:
+		postgresStore, pgErr := repository.NewPostgresStore(ctx, config.PostgresCfg)
+
+		if pgErr != nil {
+			log.Fatalf("Failed to setup postgres persistence: %v", pgErr)
+		}
+
+		store = postgresStore
+		defer postgresStore.Close()
+	case enum.File:
 		fileStore := repository.NewFileStore()
+
 		if err = fileStore.SetupPersistence(); err != nil {
 			log.Fatalf("Failed to setup file persistence: %v", err)
 		}
+
 		store = fileStore
 		defer fileStore.ClosePersistence()
 	default:
@@ -96,7 +110,7 @@ func main() {
 
 	storageService.StartStorageService(&wg, ctx, requestChan.ch, responseChan.ch, logChan.ch)
 	loggerService.StartSliceLogger(&wg, ctx, &requestChan.state, &responseChan.state, &logChan.state)
-	webserver.StartWebServer(ctx, &wg, ":8080", storageService)
+	webserver.StartWebServer(ctx, &wg, ":8081", storageService)
 
 	wg.Add(1)
 	go doForever(&wg, ctx, dispatcherService)
